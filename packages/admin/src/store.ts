@@ -3,11 +3,13 @@ import { genNavTree, NavTree } from './nav-tree'
 import { getNotifications } from './notifications'
 import { resetId } from './util/id'
 import { route } from 'omi-router'
+import type { Language } from './modules/i18n'
+import { i18n } from './index'
 
 class Store {
   themeColor: string
   installed: (store: Store) => void
-  locale: 'en' | 'zh'
+  locale: Language
   isLeftPanelClosed: boolean
   ignoreAttrs: boolean
   ui: {
@@ -16,11 +18,6 @@ class Store {
   }
   markdown: string
   html: string
-  localeMap: {
-    base?: {
-      Welcome: string
-    }
-  }
   isInstalled: boolean
   tabs: {
     label?: string
@@ -53,12 +50,10 @@ class Store {
     this.markdown = ''
     this.html = ''
 
-    this.localeMap = {}
-
     this.setLocals(this.locale, () => {
       this.tabs = [
         {
-          label: this.localeMap.base.Welcome,
+          label: i18n.t('Welcome'),
           href: '#/welcome',
           closable: false,
           id: 2
@@ -72,7 +67,6 @@ class Store {
 
     this.isInstalled = false
 
-
     route.before = (evt) => {
       if (window.innerWidth <= 640) {
         this.closeLeftPanel()
@@ -80,27 +74,26 @@ class Store {
     }
   }
 
-  setLocals(locale, callback?) {
+  setLocals(locale: Language, callback?) {
     resetId()
+
     this.locale = locale
-    import(`./l10n/${locale}/base.ts`).then((localeMap) => {
-      this.localeMap = localeMap
+    i18n.setLocale(locale)
 
-      callback && callback()
+    callback && callback()
 
-      this.treeData = genNavTree(localeMap, locale)
+    this.treeData = genNavTree()
 
-      this.tabs.forEach((tab) => {
-        tab.label = this.getTabLabelById(tab.id)
-      })
-
-      if (!this.isInstalled) {
-        this.installed(this)
-        this.isInstalled = true
-      } else {
-        this.ui.myApp.update()
-      }
+    this.tabs.forEach((tab) => {
+      tab.label = this.getTabLabelById(tab.id)
     })
+
+    if (!this.isInstalled) {
+      this.installed(this)
+      this.isInstalled = true
+    } else {
+      this.ui.myApp.update()
+    }
   }
 
   getTabLabelById(id) {
